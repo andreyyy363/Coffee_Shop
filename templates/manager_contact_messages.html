@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Contact Messages - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">Contact Messages</h1>
+
+    {% if contact_messages %}
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;"></th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Subject</th>
+                            <th>Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for msg in contact_messages %}
+                            <tr class="{% if not msg.is_read %}fw-bold{% endif %}">
+                                <td>
+                                    {% if not msg.is_read %}
+                                        <span class="badge bg-primary rounded-pill" title="Unread">&bull;</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ msg.name }}</td>
+                                <td><a href="mailto:{{ msg.email }}" style="color: var(--accent-color);">{{ msg.email }}</a></td>
+                                <td>{{ msg.subject|default:"—" }}</td>
+                                <td>{{ msg.created_at|date:"d.m.Y H:i" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'manager_contact_message_detail' pk=msg.pk %}"
+                                       class="btn btn-sm btn-outline-primary me-1"
+                                       title="View"><i class="bi bi-eye"></i></a>
+                                    <a href="{% url 'manager_contact_message_delete' pk=msg.pk %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="Delete"
+                                       onclick="return confirm('Delete this message?')"><i class="bi bi-trash"></i></a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-envelope-open" style="font-size: 3rem; color: var(--secondary-color);"></i>
+            <p class="text-muted mt-3">No contact messages yet.</p>
+        </div>
+    {% endif %}
+{% endblock %}

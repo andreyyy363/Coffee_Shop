@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: coffeeshop_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-coffeeshop}
+      POSTGRES_USER: ${POSTGRES_USER:-coffeeshop_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coffeeshop_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coffeeshop_user} -d ${POSTGRES_DB:-coffeeshop}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:latest
+    container_name: coffeeshop_adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

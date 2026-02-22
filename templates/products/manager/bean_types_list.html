@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - KAVASOUL{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title">{{ title }}</h1>
+        <a href="{% url 'products:manager_products' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Products
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <!-- Add Form -->
+            <div class="card p-4 mb-4">
+                <h5>Add New Bean Type</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create">
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <label class="form-label">Name</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Price Multiplier</label>
+                            {{ form.price_multiplier }}
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        Price multiplier: e.g., 1.0 for standard price, 1.1 for 10% more expensive
+                    </small>
+                    {% if form.name.errors %}
+                        <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                    {% endif %}
+                    {% if form.price_multiplier.errors %}
+                        <div class="text-danger small mt-1">{{ form.price_multiplier.errors.0 }}</div>
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Items List -->
+            <div class="card p-4">
+                <h5>Current Bean Types</h5>
+                {% if items %}
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Multiplier</th>
+                            <th>Example Price</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for item in items %}
+                            <tr>
+                                <td><strong>{{ item.name }}</strong></td>
+                                <td>× {{ item.price_multiplier }}</td>
+                                <td>
+                                    <small class="text-muted">
+                                        $10 → ${% widthratio item.price_multiplier 1 10 %}
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                onclick="editBeanType({{ item.pk }}, '{{ item.name|escapejs }}', '{{ item.price_multiplier }}')">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form method="post" class="d-inline"
+                                              onsubmit="return confirm('Delete this bean type?')">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="item_id" value="{{ item.pk }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted mb-0">No bean types yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card p-4">
+                <h5>Quick Links</h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'products:manager_countries' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-globe"></i> Countries
+                    </a>
+                    <a href="{% url 'products:manager_roast_levels' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-fire"></i> Roast Levels
+                    </a>
+                    <a href="{% url 'products:manager_bean_types' %}" class="btn btn-outline-secondary active">
+                        <i class="bi bi-cup-hot"></i> Bean Types
+                    </a>
+                    <a href="{% url 'products:manager_weights' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-box"></i> Weights
+                    </a>
+                </div>
+            </div>
+
+            <div class="card p-4 mt-3">
+                <h5>How Pricing Works</h5>
+                <p class="small text-muted">
+                    The <strong>bean type multiplier</strong> is applied together with the
+                    <strong>weight multiplier</strong> to calculate the final price.
+                </p>
+                <p class="small text-muted mb-0">
+                    Formula: Base Price × Weight Multiplier × Bean Type Multiplier<br>
+                    Example: $12 × 1.8 (500g) × 1.05 (Coffee beans) = $22.68
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editBeanTypeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="item_id" id="editBtId">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Bean Type</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" name="new_name" id="editBtName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Price Multiplier</label>
+                            <input type="number" name="new_multiplier" id="editBtMultiplier" class="form-control" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function editBeanType(id, name, multiplier) {
+            document.getElementById('editBtId').value = id;
+            document.getElementById('editBtName').value = name;
+            document.getElementById('editBtMultiplier').value = multiplier;
+            new bootstrap.Modal(document.getElementById('editBeanTypeModal')).show();
+        }
+    </script>
+{% endblock %}

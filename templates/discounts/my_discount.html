@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Personal Discount - KAVASOUL{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title">My Personal Discount</h1>
+    </div>
+
+    {% if not settings.is_active %}
+        <div class="alert alert-info">
+            The personal discount system is currently disabled.
+        </div>
+    {% else %}
+
+        <div class="row">
+            <!-- Current Discount Card -->
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Your Current Discount</h5>
+                        <div class="display-1 text-primary mb-3">
+                            {{ profile.base_discount_percent }}%
+                        </div>
+                        <p class="text-muted">Personal discount on all orders</p>
+
+                        {% if first_purchase_bonus > 0 %}
+                            <div class="badge bg-success fs-6 mb-2">
+                                <i class="bi bi-gift"></i> First Purchase Bonus: +{{ first_purchase_bonus }}%
+                            </div>
+                        {% endif %}
+
+                        {% if birthday_bonus > 0 %}
+                            <div class="badge bg-warning text-dark fs-6">
+                                <i class="bi bi-cake2"></i> Birthday Bonus: +{{ birthday_bonus }}%
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- RFM Scores -->
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Your RFM Scores</h5>
+                        <p class="text-muted small">
+                            RFM (Recency, Frequency, Monetary) analysis determines your personal discount.
+                        </p>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span><strong>Recency (R)</strong></span>
+                                <span>{{ profile.recency_score }}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-info"
+                                     style="width: {{ profile.recency_score|floatformat:2|stringformat:"s"|slice:":4" }}00%"></div>
+                            </div>
+                            <small class="text-muted">How recently you made a purchase</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span><strong>Frequency (F)</strong></span>
+                                <span>{{ profile.frequency_score }}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success"
+                                     style="width: {{ profile.frequency_score|floatformat:2|stringformat:"s"|slice:":4" }}00%"></div>
+                            </div>
+                            <small class="text-muted">{{ profile.total_orders }} orders
+                                (target: {{ settings.frequency_target }})</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span><strong>Monetary (M)</strong></span>
+                                <span>{{ profile.monetary_score }}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-warning"
+                                     style="width: {{ profile.monetary_score|floatformat:2|stringformat:"s"|slice:":4" }}00%"></div>
+                            </div>
+                            <small class="text-muted">${{ profile.total_spent }} spent (target:
+                                ${{ settings.monetary_target }})</small>
+                        </div>
+
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <strong>Combined RFM Score:</strong>
+                            <strong class="text-primary">{{ profile.rfm_score }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discount Curve -->
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Discount Growth Curve</h5>
+                        <div style="height: 200px;">
+                            <canvas id="discountCurve"></canvas>
+                        </div>
+                        <p class="text-muted small mt-2">
+                            The curve shows how your discount grows as your RFM score increases.
+                            Your current position is marked.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">How Personal Discounts Work</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-clock text-info"></i> Recency</h6>
+                        <p class="small text-muted">
+                            Shop more recently, get a higher Recency score.
+                            Your score decreases over {{ settings.recency_max_days }} days without purchases.
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-arrow-repeat text-success"></i> Frequency</h6>
+                        <p class="small text-muted">
+                            Make more purchases to increase your Frequency score.
+                            Target: {{ settings.frequency_target }} completed orders for maximum score.
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-cash-coin text-warning"></i> Monetary</h6>
+                        <p class="small text-muted">
+                            Higher total spending means higher Monetary score.
+                            Target: ${{ settings.monetary_target }} for maximum score.
+                        </p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6>Mathematical Formula</h6>
+                <div class="bg-light p-3 rounded">
+                    <code>
+                        RFM Score = {{ settings.weight_recency }} × R + {{ settings.weight_frequency }} × F
+                        + {{ settings.weight_monetary }} × M<br>
+                        Discount = {{ settings.base_discount_rate }}% + ({{ settings.max_discount_rate }}%
+                        - {{ settings.base_discount_rate }}%) × RFM<sup>{{ settings.curve_exponent }}</sup>
+                    </code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sample Calculation -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Sample Discount Calculation</h5>
+                <p>For a ${{ sample_order }} order, here's your discount breakdown:</p>
+
+                <table class="table">
+                    <tbody>
+                    {% for item in discount_info.breakdown %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td class="text-end text-success">
+                                {% if item.percent %}{{ item.percent }}%{% endif %}
+                                {% if item.amount %}-${{ item.amount }}{% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-muted">No discounts available yet. Start shopping!</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                    <tr class="table-light">
+                        <th>Original Amount:</th>
+                        <td class="text-end">${{ discount_info.original_amount }}</td>
+                    </tr>
+                    <tr class="table-light">
+                        <th>Total Discount:</th>
+                        <td class="text-end text-success">-${{ discount_info.total_discount_amount }}</td>
+                    </tr>
+                    <tr class="table-primary">
+                        <th>Final Amount:</th>
+                        <td class="text-end"><strong>${{ discount_info.final_amount }}</strong></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+    {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+    {% if settings.is_active %}
+        {% load l10n %}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            window.curveData = {{ curve_data|safe }};
+            window.currentRfm = parseFloat('{{ profile.rfm_score|unlocalize }}') || 0;
+            window.currentDiscount = parseFloat('{{ profile.base_discount_percent|unlocalize }}') || 0;
+        </script>
+        <script src="{% static 'js/discounts/my_discount.js' %}"></script>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Orders - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">Previous Orders</h1>
+
+    {% for order in orders %}
+        <div class="card mb-4 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <h4 class="mb-0" style="color: var(--primary-color);">Order #{{ order.order_number }}</h4>
+                <span class="badge {{ order.status_display_class }}">{{ order.get_status_display }}</span>
+            </div>
+
+            {% for item in order.items.all %}
+                <div class="d-flex align-items-center mb-3">
+                    {% if item.product and item.product.image %}
+                        <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}"
+                             class="me-3" style="width: 80px; height: 100px; object-fit: contain;">
+                    {% else %}
+                        <img src="{% static 'img/default_img.png' %}" alt="{{ item.product_name }}"
+                             class="me-3" style="width: 80px; height: 100px; object-fit: contain;">
+                    {% endif %}
+
+                    <div class="flex-grow-1">
+                        <h5 style="color: var(--primary-color);">{{ item.product_name }}</h5>
+                        <p class="text-muted mb-0">{{ item.weight }}, {{ item.bean_type }}</p>
+                    </div>
+
+                    <div class="text-center mx-3">
+                        <span>{{ item.quantity }}</span>
+                    </div>
+
+                    <div class="text-end mx-3" style="min-width: 80px;">
+                        {{ item.total_price }} USD
+                    </div>
+
+                    <div class="mx-3 text-muted">
+                        {{ order.created_at|date:"F d" }}
+                    </div>
+
+                    <a href="{% url 'orders:order_detail' order_number=order.order_number %}"
+                       class="btn btn-primary" style="border-radius: 10px;">
+                        VIEW
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% empty %}
+        <div class="text-center py-5">
+            <i class="bi bi-bag-x" style="font-size: 4rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">You haven't placed any orders yet.</p>
+            <a href="{% url 'products:catalog' %}" class="btn btn-primary">Browse Catalog</a>
+        </div>
+    {% endfor %}
+{% endblock %}

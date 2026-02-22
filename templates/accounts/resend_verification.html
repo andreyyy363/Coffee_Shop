@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Resend Verification - KAVASOUL{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card p-4">
+                <h2 class="text-center mb-4" style="color: var(--primary-color);">Verify Email</h2>
+                <p class="text-muted text-center mb-4">Enter your email to receive a new verification link.</p>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <input type="email" name="email" class="form-control form-control-lg"
+                               placeholder="Enter your email" required style="border-radius: 25px;">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100" style="border-radius: 10px;">
+                        Send Verification Link
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <a href="{% url 'accounts:login' %}" style="color: var(--primary-color);">Back to Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

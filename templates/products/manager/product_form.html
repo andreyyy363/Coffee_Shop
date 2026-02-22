@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - KAVASOUL{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title">{{ title }}</h1>
+        <a href="{% url 'products:manager_products' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Products
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card p-4">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Name *</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Slug</label>
+                            {{ form.slug }}
+                            {% if form.slug.errors %}
+                                <div class="text-danger small">{{ form.slug.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">URL-friendly name</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Image</label>
+                        {{ form.image }}
+                        {% if form.image.errors %}
+                            <div class="text-danger small">{{ form.image.errors.0 }}</div>
+                        {% endif %}
+                        {% if product and product.image %}
+                            <div class="mt-2">
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                                     style="max-width: 200px; border-radius: 8px;">
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Short Description</label>
+                        {{ form.short_description }}
+                        {% if form.short_description.errors %}
+                            <div class="text-danger small">{{ form.short_description.errors.0 }}</div>
+                        {% endif %}
+                        <small class="text-muted">Brief tagline displayed on catalog cards</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description *</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Taste Profile</label>
+                        {{ form.taste_profile }}
+                        {% if form.taste_profile.errors %}
+                            <div class="text-danger small">{{ form.taste_profile.errors.0 }}</div>
+                        {% endif %}
+                        <small class="text-muted">e.g., "Chocolate, Caramel, Nutty"</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Base Price (USD) *</label>
+                            {{ form.base_price }}
+                            {% if form.base_price.errors %}
+                                <div class="text-danger small">{{ form.base_price.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Roast Level</label>
+                            {{ form.roast_level }}
+                            {% if form.roast_level.errors %}
+                                <div class="text-danger small">{{ form.roast_level.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Countries</label>
+                            <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                                {% for checkbox in form.countries %}
+                                    <div class="form-check">
+                                        {{ checkbox.tag }}
+                                        <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                            {{ checkbox.choice_label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.countries.errors %}
+                                <div class="text-danger small">{{ form.countries.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Available Bean Types</label>
+                            <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                                {% for checkbox in form.available_bean_types %}
+                                    <div class="form-check">
+                                        {{ checkbox.tag }}
+                                        <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                            {{ checkbox.choice_label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.available_bean_types.errors %}
+                                <div class="text-danger small">{{ form.available_bean_types.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Available Weights</label>
+                            <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                                {% for checkbox in form.available_weights %}
+                                    <div class="form-check">
+                                        {% if checkbox.choice_label == '100g' %}
+                                            <input type="checkbox"
+                                                   name="{{ checkbox.data.name }}"
+                                                   value="{{ checkbox.data.value }}"
+                                                   id="{{ checkbox.id_for_label }}"
+                                                   class="form-check-input"
+                                                   checked
+                                                   disabled>
+                                            <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                                {{ checkbox.choice_label }}
+                                            </label>
+                                            <input type="hidden" name="{{ checkbox.data.name }}" value="{{ checkbox.data.value }}">
+                                        {% else %}
+                                            {{ checkbox.tag }}
+                                            <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                                {{ checkbox.choice_label }}
+                                            </label>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted">100g is always included as the base weight.</small>
+                            {% if form.available_weights.errors %}
+                                <div class="text-danger small">{{ form.available_weights.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                Active (visible on website)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Save Product
+                        </button>
+                        <a href="{% url 'products:manager_products' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card p-4">
+                <h5>Tips</h5>
+                <ul class="small text-muted">
+                    <li>Slug is auto-generated from name if you leave it empty</li>
+                    <li>Base price is for the smallest weight option</li>
+                    <li>Final price = base_price × weight_multiplier</li>
+                    <li>Inactive products won't appear in the catalog</li>
+                </ul>
+            </div>
+
+            {% if product %}
+                <div class="card p-4 mt-3">
+                    <h5>Product Info</h5>
+                    <p class="small text-muted mb-1">Created: {{ product.created_at|date:"M d, Y H:i" }}</p>
+                    <p class="small text-muted mb-1">Updated: {{ product.updated_at|date:"M d, Y H:i" }}</p>
+                    <p class="small text-muted mb-0">Reviews: {{ product.reviews_count }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

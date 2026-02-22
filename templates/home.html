@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load decimal_tags %}
+
+{% block title %}KAVASOUL - Soul made of coffee{% endblock %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <section class="hero mb-5"
+             style="background: url('{% static 'img/Banner.png' %}') center/cover no-repeat; border-radius: 20px; overflow: hidden; position: relative; min-height: 320px;">
+        <div style="position: absolute; inset: 0; background: rgba(61,41,20,0.5); border-radius: 20px;"></div>
+        <div class="row align-items-center" style="position: relative; z-index: 1;">
+            <div class="col-12 col-md-7 p-5 text-start">
+                <h1 class="text-white display-4" style="font-family: Georgia, serif;">Soul made<br>of coffee</h1>
+                <p class="text-white-50 my-4">Discover high-quality coffee<br>from around the world.</p>
+                <a href="{% url 'products:catalog' %}" class="btn btn-lg px-5 py-3"
+                   style="background-color: var(--secondary-color); color: var(--text-color); border-radius: 10px;">
+                    Shop now
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Popular Products -->
+    <section class="mb-5">
+        <h2 class="page-title">Popular products</h2>
+
+        {% if popular_products %}
+            <div class="position-relative popular-carousel-wrapper">
+                <!-- Left Arrow -->
+                <button class="btn popular-carousel-arrow popular-carousel-arrow-left" id="popular-prev" aria-label="Previous">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+
+                <!-- Carousel Track -->
+                <div class="popular-carousel-viewport" id="popular-viewport">
+                    <div class="popular-carousel-track" id="popular-track">
+                        {% for product in popular_products %}
+                            <div class="popular-carousel-slide">
+                                <div class="product-card position-relative h-100 d-flex flex-column">
+                                    {% if user.is_authenticated %}
+                                        <button class="favorite-btn {% if product.id in user_favorites %}active{% endif %}"
+                                                onclick="toggleFavorite({{ product.id }}, this)">
+                                            <i class="bi bi-heart{% if product.id in user_favorites %}-fill{% endif %}"></i>
+                                        </button>
+                                    {% endif %}
+
+                                    <a href="{% url 'products:detail' slug=product.slug %}" class="product-card-img-wrap">
+                                        {% if product.image %}
+                                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid mb-3">
+                                        {% else %}
+                                            <img src="{% static 'img/default_img.png' %}" alt="{{ product.name }}"
+                                                 class="img-fluid mb-3">
+                                        {% endif %}
+                                    </a>
+
+                                    <h5 class="product-name">{{ product.name }}</h5>
+                                    <p class="product-desc mb-1">{{ product.short_description|default:"natural roasted, 1 kg" }}</p>
+                                    <p class="product-origin">{{ product.countries_display }}</p>
+
+                                    <div class="rating mb-2">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= product.average_rating %}
+                                                <i class="bi bi-star-fill"></i>
+                                            {% else %}
+                                                <i class="bi bi-star-fill empty"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+
+                                    <div class="mt-auto">
+                                        {% if discount_percent > 0 %}
+                                            <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                                                <span class="text-muted text-decoration-line-through small">{{ product.base_price }} USD</span>
+                                                <span class="badge bg-danger small">-{{ discount_percent }}%</span>
+                                            </div>
+                                            <p class="product-price text-success mb-2">{{ product.base_price|apply_discount:discount_percent }} USD</p>
+                                        {% else %}
+                                            <p class="product-price">{{ product.base_price }} USD</p>
+                                        {% endif %}
+
+                                        <a href="{% url 'products:detail' slug=product.slug %}" class="btn btn-primary w-100">
+                                            Add to cart
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Right Arrow -->
+                <button class="btn popular-carousel-arrow popular-carousel-arrow-right" id="popular-next" aria-label="Next">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+
+                <!-- Dots -->
+                <div class="popular-carousel-dots" id="popular-dots"></div>
+            </div>
+        {% else %}
+            <div class="text-center">
+                <p class="text-muted">No products available yet.</p>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- About Us -->
+    <section class="mb-5">
+        <h2 class="page-title">About us</h2>
+
+        <div class="row align-items-center">
+            <div class="col-md-4 mb-4 mb-md-0">
+                <img src="{% static 'img/KAVASOUL.png' %}" alt="KAVASOUL" class="img-fluid"
+                     style="max-height: 500px; border-radius: 20px;">
+            </div>
+
+            <div class="col-md-8">
+                <h3 style="color: var(--primary-color);">The Soul of Coffee, From Bean to Brew.</h3>
+                <p class="text-justify">
+                    We are dedicated to the art of coffee. Our philosophy is rooted in freshness and ethical sourcing.
+                    We partner directly with sustainable, independent farmers who share our commitment to quality and
+                    ecological balance.
+                </p>
+                <p class="text-justify">
+                    All our beans are roasted right here, only after your order is placed, ensuring you receive the
+                    maximum flavor and aroma possible. When you choose KAVASOUL, you're not just buying coffee;
+                    you're supporting responsible practices and savoring unparalleled freshness.
+                </p>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/home-carousel.js' %}"></script>
+{% endblock %}

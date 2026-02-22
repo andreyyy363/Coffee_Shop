@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load decimal_tags %}
+{% load static %}
+
+{% block content %}
+    <h1 class="page-title">Cart</h1>
+
+    <div class="row">
+        <!-- Order Form -->
+        <div class="col-lg-5 mb-4">
+            <div class="card p-4">
+                <h4>Placing an order</h4>
+
+                {% if user.is_authenticated %}
+                    <form method="post" id="checkout-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <input type="text" name="full_name" class="form-control"
+                                   placeholder="First and Last Name" value="{{ form.full_name.value|default:'' }}"
+                                   required
+                                   style="border-radius: 25px;">
+                        </div>
+                        <div class="mb-3">
+                        <textarea name="address" class="form-control" placeholder="Delivery address"
+                                  rows="2" required
+                                  style="border-radius: 15px;">{{ form.address.value|default:'' }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <div data-phone-input data-phone-name="phone" data-phone-required="true">
+                                <input type="tel" name="phone" class="form-control"
+                                       placeholder="Contact number" value="{{ form.phone.value|default:'' }}" required>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Promo Code Section -->
+                        <h5><i class="bi bi-ticket-perforated me-2"></i>Promo Code</h5>
+                        <div class="input-group mb-3">
+                            <input type="text" name="promo_code" id="promo-code-input" class="form-control"
+                                   placeholder="Enter promo code" style="border-radius: 25px 0 0 25px;"
+                                   value="{{ applied_promo_code|default:'' }}">
+                            <button type="button" class="btn btn-outline-primary" onclick="applyPromoCode()"
+                                    style="border-radius: 0 25px 25px 0;">
+                                Apply
+                            </button>
+                        </div>
+                        <div id="promo-code-message" class="mb-3" style="display: none;"></div>
+                        <input type="hidden" name="promo_code_applied" id="promo-code-applied"
+                               value="{{ applied_promo_code|default:'' }}">
+
+                        <hr>
+
+                        <h5>Payment</h5>
+                        <select name="payment_type" class="form-select mb-3" style="border-radius: 25px;">
+                            <option value="cod">Cash on Delivery</option>
+                            <option value="bank">Bank Transfer</option>
+                        </select>
+                    </form>
+                {% else %}
+                    <p class="text-muted">
+                        Please <a href="{% url 'accounts:login' %}?next={% url 'orders:cart' %}">log in</a> to place an
+                        order.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Cart Items -->
+        <div class="col-lg-7">
+            <div class="card p-4">
+                {% if cart.items.exists %}
+                    {% for item in cart.items.all %}
+                        <div class="d-flex align-items-center mb-4 pb-4 border-bottom cart-item"
+                             data-item-id="{{ item.id }}">
+                            {% if item.product.image %}
+                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}"
+                                     class="me-3" style="width: 100px; height: 130px; object-fit: contain;">
+                            {% else %}
+                                <img src="{% static 'img/default_img.png' %}" alt="{{ item.product.name }}"
+                                     class="me-3" style="width: 100px; height: 130px; object-fit: contain;">
+                            {% endif %}
+
+                            <div class="flex-grow-1">
+                                <h5 style="color: var(--primary-color);">{{ item.product.name }}</h5>
+                                <p class="text-muted mb-0">{{ item.weight.grams }}g, {{ item.bean_type.name }}</p>
+                            </div>
+
+                            <div class="d-flex align-items-center mx-3">
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        onclick="updateCartItem({{ item.id }}, -1)">-
+                                </button>
+                                <span class="mx-2 item-quantity">{{ item.quantity }}</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        onclick="updateCartItem({{ item.id }}, 1)">+
+                                </button>
+                            </div>
+
+                            <div class="text-end mx-3" style="min-width: 80px;">
+                                <span class="item-total">{{ item.total_price }}</span> USD
+                            </div>
+
+                            <button type="button" class="btn btn-link text-danger"
+                                    onclick="removeCartItem({{ item.id }})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    {% endfor %}
+
+                    <!-- Totals -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><strong>Subtotal</strong></span>
+                            <span id="subtotal">{{ cart.subtotal }} USD</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><strong>Shipping</strong></span>
+                            <span>{{ cart.shipping }} USD</span>
+                        </div>
+
+                        <!-- Discount Section - only show if user is authenticated -->
+                        {% if user.is_authenticated and discount_info.total_discount_amount > 0 %}
+                            <div class="discount-breakdown p-3 mb-2"
+                                 style="background: linear-gradient(135deg, #f0fff0, #e8f5e9); border-radius: 10px; border: 1px dashed #4caf50;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-success"><i
+                                            class="bi bi-gift me-2"></i><strong>Your Discount</strong></span>
+                                    {% if discount_info.total_discount_percent > 0 %}
+                                        <span class="badge bg-success">-{{ discount_info.total_discount_percent }}%</span>
+                                    {% endif %}
+                                </div>
+
+                                {% for item in discount_info.breakdown %}
+                                    {% if item.type != 'promo' %}
+                                        <div class="d-flex justify-content-between small text-muted">
+                                            <span>{{ item.name }}</span>
+                                            {% if item.percent %}
+                                                <span>-{{ item.percent }}%</span>
+                                            {% elif item.amount %}
+                                                <span>-{{ item.amount }} USD</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if discount_info.promo_display %}
+                                    <hr class="my-2">
+                                    <div class="d-flex justify-content-between small"
+                                         style="color: #6f42c1;">
+                                        <span><i class="bi bi-ticket-perforated me-1"></i>Promo Code: {{ discount_info.promo_display.code }}</span>
+                                        {% if discount_info.promo_display.discount_type == 'percent' %}
+                                            <span>-{{ discount_info.promo_display.discount_value }}%</span>
+                                        {% else %}
+                                            <span>-{{ discount_info.promo_display.discount_amount }} USD</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                <hr class="my-2">
+                                <div class="d-flex justify-content-between text-success">
+                                    <span><strong>Total Savings</strong></span>
+                                    <span id="discount-amount"><strong>-{{ discount_info.total_discount_amount }} USD</strong></span>
+                                </div>
+                            </div>
+                        {% elif user.is_authenticated %}
+                            <div id="discount-placeholder" class="text-muted small mb-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <a href="{% url 'discounts:my_discount' %}">View your personal discount</a>
+                            </div>
+                        {% endif %}
+
+                        <hr>
+                        <div class="d-flex justify-content-between mb-2">
+                            {% if user.is_authenticated and discount_info.total_discount_amount > 0 %}
+                                <span class="text-muted"><del>Original Total</del></span>
+                                <span class="text-muted"><del
+                                        id="original-total">{{ discount_info.original_amount|add_decimal:cart.shipping }} USD</del></span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-between mb-4">
+                            <span><strong>Final Total</strong></span>
+                            {% if discount_info.final_amount %}
+                                <span id="total"><strong
+                                        class="text-primary fs-5">{{ discount_info.final_amount|add_decimal:cart.shipping }} USD</strong></span>
+                            {% else %}
+                                <span id="total"><strong class="text-primary fs-5">{{ cart.total }} USD</strong></span>
+                            {% endif %}
+                        </div>
+
+                        {% if user.is_authenticated %}
+                            <button type="submit" form="checkout-form" class="btn btn-primary btn-lg w-100"
+                                    style="border-radius: 10px;" {% if not cart.items.exists %}disabled{% endif %}>
+                                Checkout
+                            </button>
+                        {% else %}
+                            <a href="{% url 'accounts:login' %}?next={% url 'orders:cart' %}"
+                               class="btn btn-primary btn-lg w-100" style="border-radius: 10px;">
+                                Log in to Checkout
+                            </a>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-cart-x" style="font-size: 4rem; color: #ccc;"></i>
+                        <p class="text-muted mt-3">Your cart is empty</p>
+                        <a href="{% url 'products:catalog' %}" class="btn btn-primary">Browse Catalog</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/orders/cart.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initCart({
+                applyPromoUrl: '{% url "orders:apply_promo_code" %}'
+            });
+        });
+    </script>
+{% endblock %}

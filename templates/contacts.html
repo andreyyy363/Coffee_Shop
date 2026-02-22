@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contacts - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">Contacts</h1>
+
+    <div class="row g-4 mb-5">
+        <!-- Contact Info Cards -->
+        <div class="col-md-4">
+            <div class="card text-center p-4 h-100">
+                <div class="mb-3">
+                    <i class="bi bi-geo-alt-fill" style="font-size: 2.5rem; color: var(--primary-color);"></i>
+                </div>
+                <h5 style="color: var(--primary-color);">Our Address</h5>
+                <p class="text-muted mb-0">123 Coffee Street<br>Kyiv, Ukraine 01001</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center p-4 h-100">
+                <div class="mb-3">
+                    <i class="bi bi-clock-fill" style="font-size: 2.5rem; color: var(--primary-color);"></i>
+                </div>
+                <h5 style="color: var(--primary-color);">Working Hours</h5>
+                <p class="text-muted mb-0">
+                    Mon — Fri: 9:00 — 20:00<br>
+                    Sat — Sun: 10:00 — 18:00
+                </p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center p-4 h-100">
+                <div class="mb-3">
+                    <i class="bi bi-telephone-fill" style="font-size: 2.5rem; color: var(--primary-color);"></i>
+                </div>
+                <h5 style="color: var(--primary-color);">Phone & Email</h5>
+                <p class="text-muted mb-0">
+                    +380 (44) 123-45-67<br>
+                    <a href="mailto:info@kavasoul.com" style="color: var(--accent-color);">info@kavasoul.com</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Form + Social -->
+    <div class="row g-4 mb-5">
+        <div class="col-lg-7">
+            <div class="card p-4">
+                <h4 style="color: var(--primary-color);" class="mb-4">Send us a message</h4>
+                <form method="post" action="{% url 'contacts' %}" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <small class="text-danger">{{ form.name.errors.0 }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <small class="text-danger">{{ form.email.errors.0 }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.subject }}
+                        {% if form.subject.errors %}
+                            <small class="text-danger">{{ form.subject.errors.0 }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.message }}
+                        {% if form.message.errors %}
+                            <small class="text-danger">{{ form.message.errors.0 }}</small>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-primary px-5" style="border-radius: 10px;">
+                        <i class="bi bi-send me-2"></i>Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card p-4 h-100">
+                <h4 style="color: var(--primary-color);" class="mb-4">Follow us</h4>
+                <p class="text-muted">Stay connected and be the first to know about new arrivals, special offers, and coffee tips.</p>
+
+                <div class="d-flex flex-column gap-3 mt-3">
+                    <a href="#" class="d-flex align-items-center text-decoration-none" style="color: var(--text-color);">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
+                             style="width: 48px; height: 48px; background: var(--secondary-color);">
+                            <i class="bi bi-instagram" style="font-size: 1.3rem;"></i>
+                        </div>
+                        <div>
+                            <strong>Instagram</strong>
+                            <br><small class="text-muted">@kavasoul</small>
+                        </div>
+                    </a>
+
+                    <a href="#" class="d-flex align-items-center text-decoration-none" style="color: var(--text-color);">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
+                             style="width: 48px; height: 48px; background: var(--secondary-color);">
+                            <i class="bi bi-facebook" style="font-size: 1.3rem;"></i>
+                        </div>
+                        <div>
+                            <strong>Facebook</strong>
+                            <br><small class="text-muted">KAVASOUL Coffee</small>
+                        </div>
+                    </a>
+
+                    <a href="#" class="d-flex align-items-center text-decoration-none" style="color: var(--text-color);">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
+                             style="width: 48px; height: 48px; background: var(--secondary-color);">
+                            <i class="bi bi-telegram" style="font-size: 1.3rem;"></i>
+                        </div>
+                        <div>
+                            <strong>Telegram</strong>
+                            <br><small class="text-muted">@kavasoul_bot</small>
+                        </div>
+                    </a>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="text-center">
+                    <p class="text-muted small mb-2">We typically respond within 24 hours</p>
+                    <i class="bi bi-cup-hot-fill" style="font-size: 2rem; color: var(--secondary-color);"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

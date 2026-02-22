@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Reviews - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">Manage Reviews</h1>
+
+    <!-- Filter -->
+    <div class="mb-4">
+        <a href="{% url 'reviews:manager_reviews' %}"
+           class="btn {% if not current_filter %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            All
+        </a>
+        <a href="?approved=1"
+           class="btn {% if current_filter == '1' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Approved
+        </a>
+        <a href="?approved=0"
+           class="btn {% if current_filter == '0' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Pending
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Product</th>
+                <th>User</th>
+                <th>Rating</th>
+                <th>Comment</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for review in reviews %}
+                <tr>
+                    <td>
+                        <a href="{% url 'products:detail' slug=review.product.slug %}">
+                            {{ review.product.name }}
+                        </a>
+                    </td>
+                    <td>{{ review.user.email }}</td>
+                    <td>
+                        <span class="rating">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= review.rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                    </td>
+                    <td>{{ review.comment|truncatechars:50|default:"-" }}</td>
+                    <td>{{ review.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        {% if review.is_approved %}
+                            <span class="badge bg-success">Approved</span>
+                        {% else %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" action="{% url 'reviews:toggle_approval' review_id=review.id %}"
+                              class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="btn btn-sm {% if review.is_approved %}btn-warning{% else %}btn-success{% endif %}">
+                                {% if review.is_approved %}Reject{% else %}Approve{% endif %}
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'reviews:delete' review_id=review.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Delete this review?')">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No reviews found.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
