@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+{% load l10n static %}
+
+{% block title %}Inventory Forecast - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title mb-4">
+        <i class="bi bi-box-seam me-2"></i>Inventory Forecasting
+    </h1>
+
+    <!-- Controls Panel -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Forecast Parameters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" id="inventoryForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label">History (days)</label>
+                        <input type="number" name="days_back" id="paramDaysBack" class="form-control"
+                               value="{{ days_back }}" min="14" max="365">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Forecast (days)</label>
+                        <input type="number" name="forecast_days" id="paramForecastDays" class="form-control"
+                               value="{{ forecast_days }}" min="7" max="60">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Lead Time (days)</label>
+                        <input type="number" name="lead_time" id="paramLeadTime" class="form-control"
+                               value="{{ lead_time }}" min="1" max="30">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Service Level</label>
+                        <select name="service_level" id="paramServiceLevel" class="form-select">
+                            <option value="90" {% if service_level == 90 %}selected{% endif %}>90%</option>
+                            <option value="95" {% if service_level == 95 %}selected{% endif %}>95%</option>
+                            <option value="97" {% if service_level == 97 %}selected{% endif %}>97%</option>
+                            <option value="99" {% if service_level == 99 %}selected{% endif %}>99%</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4"></div>
+
+                    <!-- α slider -->
+                    <div class="col-md-4">
+                        <label class="form-label">α (level): <strong
+                                id="alphaValue">{{ alpha|unlocalize }}</strong></label>
+                        <input type="range" class="form-range" min="0.01" max="0.99" step="0.01"
+                               name="alpha" id="paramAlpha" value="{{ alpha|unlocalize }}">
+                    </div>
+                    <!-- β slider -->
+                    <div class="col-md-4">
+                        <label class="form-label">β (trend): <strong
+                                id="betaValue">{{ beta|unlocalize }}</strong></label>
+                        <input type="range" class="form-range" min="0.01" max="0.99" step="0.01"
+                               name="beta" id="paramBeta" value="{{ beta|unlocalize }}">
+                    </div>
+                    <!-- γ slider -->
+                    <div class="col-md-4">
+                        <label class="form-label">γ (season): <strong
+                                id="gammaValue">{{ gamma|unlocalize }}</strong></label>
+                        <input type="range" class="form-range" min="0.01" max="0.99" step="0.01"
+                               name="gamma" id="paramGamma" value="{{ gamma|unlocalize }}">
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex align-items-center">
+                    <a href="{% url 'analytics:inventory_forecast' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                    </a>
+                    <span id="loadingIndicator" class="ms-3 text-muted d-none">
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    Updating...
+                </span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    {% if result.summary.total_products > 0 %}
+        <div class="row mb-4" id="summaryCards">
+            <div class="col-md-2">
+                <div class="card text-center p-3">
+                    <div class="text-muted small">PRODUCTS</div>
+                    <div class="h4 mb-0" id="summaryProducts">{{ result.summary.total_products }}</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center p-3">
+                    <div class="text-muted small">TOTAL UNITS TO ORDER</div>
+                    <div class="h4 mb-0" id="summaryTotalUnits">{{ result.summary.total_recommended_units }}</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center p-3">
+                    <div class="text-muted small">GROWING</div>
+                    <div class="h4 mb-0 text-success" id="summaryGrowing">
+                        <i class="bi bi-arrow-up-circle"></i> {{ result.summary.growing_products }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center p-3">
+                    <div class="text-muted small">DECLINING</div>
+                    <div class="h4 mb-0 text-danger" id="summaryDeclining">
+                        <i class="bi bi-arrow-down-circle"></i> {{ result.summary.declining_products }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center p-3">
+                    <div class="text-muted small">STABLE</div>
+                    <div class="h4 mb-0 text-warning" id="summaryStable">
+                        <i class="bi bi-dash-circle"></i> {{ result.summary.stable_products }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center p-3">
+                    <div class="text-muted small">AVG SAFETY STOCK</div>
+                    <div class="h4 mb-0" id="summaryAvgSafety">{{ result.summary.avg_safety_stock }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Recommendations Chart -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Recommended Order Quantities</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="inventoryChart" height="100"></canvas>
+            </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-table me-2"></i>Product Inventory Analysis</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" data-sort="sold" id="sortSold">By
+                        Sales
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-sort="order" id="sortOrder">By Order
+                        Qty
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-sort="safety" id="sortSafety">By Safety
+                        Stock
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Product</th>
+                            <th>Total Sold</th>
+                            <th>Avg/Day</th>
+                            <th>Trend</th>
+                            <th>Demand Pattern</th>
+                            <th>Forecast ({{ forecast_days }}d)</th>
+                            <th>Safety Stock</th>
+                            <th>Reorder Point</th>
+                            <th>Order Qty</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                        {% for p in result.products %}
+                            <tr data-product-id="{{ p.product_id }}"
+                                data-sold="{{ p.total_sold }}"
+                                data-order="{{ p.recommended_order_qty }}"
+                                data-safety="{{ p.safety_stock }}">
+                                <td>{{ forloop.counter }}</td>
+                                <td><strong>{{ p.product_name }}</strong></td>
+                                <td>{{ p.total_sold }}</td>
+                                <td>{{ p.avg_daily_demand }}</td>
+                                <td>
+                                    {% if p.trend == 'growing' %}
+                                        <span class="badge bg-success"><i class="bi bi-arrow-up"></i> Growing</span>
+                                    {% elif p.trend == 'declining' %}
+                                        <span class="badge bg-danger"><i class="bi bi-arrow-down"></i> Declining</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark"><i
+                                                class="bi bi-dash"></i> Stable</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.demand_pattern == 'stable' %}
+                                        <span class="badge bg-info text-dark">Stable (CV={{ p.cv }})</span>
+                                    {% elif p.demand_pattern == 'variable' %}
+                                        <span class="badge bg-warning text-dark">Variable (CV={{ p.cv }})</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Highly Variable (CV={{ p.cv }})</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ p.forecast_total }} units</td>
+                                <td><strong>{{ p.safety_stock }}</strong></td>
+                                <td>{{ p.reorder_point }}</td>
+                                <td>
+                                    <span class="badge bg-primary fs-6">{{ p.recommended_order_qty }}</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary btn-detail"
+                                            data-product-id="{{ p.product_id }}"
+                                            title="View demand chart">
+                                        <i class="bi bi-graph-up"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Detail Modal -->
+        <div class="modal fade" id="productDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalProductName">Product Demand Forecast</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Product stats row -->
+                        <div class="row mb-3" id="modalStatsRow">
+                            <div class="col-md-3">
+                                <div class="card text-center p-2 bg-light">
+                                    <div class="text-muted small">AVG DAILY</div>
+                                    <div class="h5 mb-0" id="modalAvgDaily">—</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center p-2 bg-light">
+                                    <div class="text-muted small">SAFETY STOCK</div>
+                                    <div class="h5 mb-0" id="modalSafetyStock">—</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center p-2 bg-light">
+                                    <div class="text-muted small">REORDER POINT</div>
+                                    <div class="h5 mb-0" id="modalReorderPoint">—</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center p-2 bg-light">
+                                    <div class="text-muted small">ORDER QUANTITY</div>
+                                    <div class="h5 mb-0 text-primary" id="modalOrderQty">—</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Demand chart -->
+                        <canvas id="productDemandChart" height="80"></canvas>
+                        <!-- Method info -->
+                        <div class="mt-3 small text-muted" id="modalMethodInfo"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mathematical Model -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Mathematical Model</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-4">
+                        <p class="mb-2"><strong>Demand Forecasting: Holt-Winters</strong></p>
+                        <div class="bg-light rounded p-2 font-monospace small mb-2">
+                            Level:&nbsp;&nbsp; l<sub>t</sub> = α(x<sub>t</sub> − s<sub>t−m</sub>) +
+                            (1−α)(l<sub>t−1</sub> + b<sub>t−1</sub>)<br>
+                            Trend:&nbsp;&nbsp; b<sub>t</sub> = β(l<sub>t</sub> − l<sub>t−1</sub>) + (1−β)b<sub>t−1</sub><br>
+                            Season:&nbsp; s<sub>t</sub> = γ(x<sub>t</sub> − l<sub>t</sub>) + (1−γ)s<sub>t−m</sub><br>
+                            Forecast: ŷ<sub>t+h</sub> = l<sub>t</sub> + h·b<sub>t</sub> + s<sub>t−m+h<sub>m</sub></sub>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <p class="mb-2"><strong>Safety Stock</strong></p>
+                        <div class="bg-light rounded p-2 font-monospace small mb-2">
+                            SS = Z × σ<sub>d</sub> × √L<br><br>
+                            Z &nbsp;— service level z-score<br>
+                            σ<sub>d</sub> — std dev of daily demand<br>
+                            L &nbsp;— lead time (days)
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <p class="mb-2"><strong>Reorder Point & Order Quantity</strong></p>
+                        <div class="bg-light rounded p-2 font-monospace small mb-2">
+                            ROP = d̄ × L + SS<br><br>
+                            ROQ = Σŷ<sub>t+h</sub> + SS<br><br>
+                            d̄ — avg daily demand<br>
+                            Σŷ — total forecasted demand
+                        </div>
+                    </div>
+                </div>
+                <div class="small mt-2" id="modelBadges">
+                    <span class="badge bg-secondary">α = {{ alpha|unlocalize }}</span>
+                    <span class="badge bg-secondary">β = {{ beta|unlocalize }}</span>
+                    <span class="badge bg-secondary">γ = {{ gamma|unlocalize }}</span>
+                    <span class="badge bg-secondary">Lead Time = {{ lead_time }}d</span>
+                    <span class="badge bg-secondary">Service Level = {{ service_level }}%</span>
+                    <span class="badge bg-secondary">Z = {% if service_level == 90 %}1.28{% elif service_level == 95 %}
+                        1.645{% elif service_level == 97 %}1.96{% else %}2.33{% endif %}</span>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- No Data -->
+        <div class="card p-5 text-center">
+            <i class="bi bi-inbox display-1 text-muted"></i>
+            <h3 class="mt-3">No Sales Data</h3>
+            <p class="text-muted">There are no completed orders in the selected period to generate inventory
+                forecasts.</p>
+        </div>
+    {% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="{% static 'js/analytics/inventory_forecast.js' %}"></script>
+
+    <script>
+        initInventoryForecast({
+            apiUrl: '{% url "analytics:inventory_forecast_api" %}',
+            productApiUrl: '{% url "analytics:inventory_product_api" product_id=0 %}'.replace('/0/', '/{id}/'),
+            {% if result.summary.total_products > 0 %}
+                initialProducts: JSON.parse('{{ products_json|escapejs }}')
+            {% else %}
+                initialProducts: null
+            {% endif %}
+        });
+    </script>
+{% endblock %}

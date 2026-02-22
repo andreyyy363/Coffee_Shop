@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - KAVASOUL{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title">{{ title }}</h1>
+        <a href="{% url 'products:manager_products' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Products
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <!-- Add Form -->
+            <div class="card p-4 mb-4">
+                <h5>Add New Weight Option</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create">
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <label class="form-label">Grams</label>
+                            {{ form.grams }}
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Price Multiplier</label>
+                            {{ form.price_multiplier }}
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        Price multiplier: e.g., 1.0 for base price, 1.8 for 1.8x base price
+                    </small>
+                    {% if form.grams.errors %}
+                        <div class="text-danger small mt-1">{{ form.grams.errors.0 }}</div>
+                    {% endif %}
+                    {% if form.price_multiplier.errors %}
+                        <div class="text-danger small mt-1">{{ form.price_multiplier.errors.0 }}</div>
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Items List -->
+            <div class="card p-4">
+                <h5>Current Weight Options</h5>
+                {% if items %}
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th>Weight</th>
+                            <th>Multiplier</th>
+                            <th>Example Price</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for item in items %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.grams }}g</strong>
+                                    {% if item.grams == 100 %}
+                                        <span class="badge bg-secondary ms-1">base</span>
+                                    {% endif %}
+                                </td>
+                                <td>× {{ item.price_multiplier }}</td>
+                                <td>
+                                    <small class="text-muted">
+                                        $10 → ${% widthratio item.price_multiplier 1 10 %}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if item.grams != 100 %}
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                                    onclick="editWeight({{ item.pk }}, '{{ item.grams }}', '{{ item.price_multiplier }}')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <form method="post" class="d-inline"
+                                                  onsubmit="return confirm('Delete this weight option?')">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="item_id" value="{{ item.pk }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted mb-0">No weight options yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card p-4">
+                <h5>Quick Links</h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'products:manager_countries' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-globe"></i> Countries
+                    </a>
+                    <a href="{% url 'products:manager_roast_levels' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-fire"></i> Roast Levels
+                    </a>
+                    <a href="{% url 'products:manager_bean_types' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-cup-hot"></i> Bean Types
+                    </a>
+                    <a href="{% url 'products:manager_weights' %}" class="btn btn-outline-secondary active">
+                        <i class="bi bi-box"></i> Weights
+                    </a>
+                </div>
+            </div>
+
+            <div class="card p-4 mt-3">
+                <h5>How Pricing Works</h5>
+                <p class="small text-muted">
+                    Each product has a <strong>base price</strong>. The final price is calculated by multiplying
+                    the base price by the weight's <strong>price multiplier</strong>.
+                </p>
+                <p class="small text-muted mb-0">
+                    Example: If a coffee costs $12 (base) and a customer selects 500g with a 1.8 multiplier,
+                    they'll pay $12 × 1.8 = $21.60
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editWeightModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="item_id" id="editWtId">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Weight Option</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Grams</label>
+                            <input type="number" name="new_grams" id="editWtGrams" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Price Multiplier</label>
+                            <input type="number" name="new_multiplier" id="editWtMultiplier" class="form-control" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function editWeight(id, grams, multiplier) {
+            document.getElementById('editWtId').value = id;
+            document.getElementById('editWtGrams').value = grams;
+            document.getElementById('editWtMultiplier').value = multiplier;
+            new bootstrap.Modal(document.getElementById('editWeightModal')).show();
+        }
+    </script>
+{% endblock %}

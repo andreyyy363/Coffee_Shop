@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load decimal_tags %}
+
+{% block title %}Favorites - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">Favourite</h1>
+
+    <div class="row g-4">
+        {% for favorite in favorites %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="product-card position-relative h-100 d-flex flex-column">
+                    <button class="favorite-btn active"
+                            onclick="toggleFavorite({{ favorite.product.id }}, this); this.closest('.col-6').remove();">
+                        <i class="bi bi-heart-fill"></i>
+                    </button>
+
+                    <a href="{% url 'products:detail' slug=favorite.product.slug %}" class="product-card-img-wrap">
+                        {% if favorite.product.image %}
+                            <img src="{{ favorite.product.image.url }}" alt="{{ favorite.product.name }}"
+                                 class="img-fluid mb-3">
+                        {% else %}
+                            <img src="{% static 'img/default_img.png' %}" alt="{{ favorite.product.name }}"
+                                 class="img-fluid mb-3">
+                        {% endif %}
+                    </a>
+
+                    <h5 class="product-name">{{ favorite.product.name }}</h5>
+                    <p class="product-desc mb-1">{{ favorite.product.short_description|default:"natural roasted, 1 kg" }}</p>
+                    <p class="product-origin">{{ favorite.product.countries_display }}</p>
+
+                    <div class="rating mb-2">
+                        {% with rating=favorite.product.average_rating %}
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-star-fill empty"></i>
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                    </div>
+
+                    <div class="mt-auto">
+                        {% if discount_percent > 0 %}
+                            <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                                <span class="text-muted text-decoration-line-through small">{{ favorite.product.base_price }} USD</span>
+                                <span class="badge bg-danger small">-{{ discount_percent }}%</span>
+                            </div>
+                            <p class="product-price text-success mb-2">{{ favorite.product.base_price|apply_discount:discount_percent }} USD</p>
+                        {% else %}
+                            <p class="product-price">{{ favorite.product.base_price }} USD</p>
+                        {% endif %}
+
+                        <a href="{% url 'products:detail' slug=favorite.product.slug %}" class="btn btn-primary w-100">
+                            Add to cart
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center">
+                <p class="text-muted">You haven't added any favorites yet.</p>
+                <a href="{% url 'products:catalog' %}" class="btn btn-primary">Browse Catalog</a>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

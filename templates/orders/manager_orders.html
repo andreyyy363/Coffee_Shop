@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Orders - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">Manage Orders</h1>
+
+    <!-- Search Form -->
+    <form method="get" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="search" class="form-control"
+                   placeholder="Search by order number, customer name, or email..."
+                   value="{{ search_query|default:'' }}">
+            {% if current_status %}
+                <input type="hidden" name="status" value="{{ current_status }}">
+            {% endif %}
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i> Search
+            </button>
+            {% if search_query %}
+                <a href="{% url 'orders:manager_orders' %}{% if current_status %}?status={{ current_status }}{% endif %}"
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            {% endif %}
+        </div>
+    </form>
+
+    <!-- Filter by status -->
+    <div class="mb-4">
+        <a href="{% url 'orders:manager_orders' %}{% if search_query %}?search={{ search_query }}{% endif %}"
+           class="btn {% if not current_status %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            All
+        </a>
+        {% for status_code, status_name in status_choices %}
+            <a href="?status={{ status_code }}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="btn {% if current_status == status_code %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                {{ status_name }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td><strong>#{{ order.order_number }}</strong></td>
+                    <td>
+                        {{ order.full_name }}<br>
+                        <small class="text-muted">{{ order.user.email|default:"Guest" }}</small>
+                    </td>
+                    <td>{{ order.items.count }} item(s)</td>
+                    <td>{{ order.total }} USD</td>
+                    <td><span class="badge {{ order.status_display_class }}">{{ order.get_status_display }}</span></td>
+                    <td>{{ order.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <a href="{% url 'orders:manager_order_detail' order_number=order.order_number %}"
+                           class="btn btn-sm btn-primary">
+                            View / Edit
+                        </a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No orders found.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

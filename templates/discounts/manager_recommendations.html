@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block title %}Recommendation Settings - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title mb-4">Recommendation System Settings</h1>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Hybrid Algorithm Weights -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Hybrid Algorithm Weights</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">
+                            These weights determine the importance of each recommendation approach.
+                            <strong>Must sum to 1.0</strong>
+                        </p>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Content-Based (α)</label>
+                                <input type="number" step="0.01" min="0" max="1" name="weight_content_based"
+                                       class="form-control" value="{{ settings.weight_content_based|unlocalize }}"
+                                       required>
+                                <small class="text-muted">Product feature similarity</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Collaborative (β)</label>
+                                <input type="number" step="0.01" min="0" max="1" name="weight_collaborative"
+                                       class="form-control" value="{{ settings.weight_collaborative|unlocalize }}"
+                                       required>
+                                <small class="text-muted">User behavior patterns</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Popularity (γ)</label>
+                                <input type="number" step="0.01" min="0" max="1" name="weight_popularity"
+                                       class="form-control" value="{{ settings.weight_popularity|unlocalize }}"
+                                       required>
+                                <small class="text-muted">Popular items boost</small>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="bi bi-info-circle"></i>
+                            Formula: <strong>Score = α×CBF + β×CF + γ×Popularity</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content-Based Feature Weights -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-tags me-2"></i>Content-Based Feature Weights</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">
+                            Weights for product features in content-based similarity calculation.
+                            <strong>Must sum to 1.0</strong>
+                        </p>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Country Origin</label>
+                                <input type="number" step="0.01" min="0" max="1" name="feature_country_weight"
+                                       class="form-control" value="{{ settings.feature_country_weight|unlocalize }}"
+                                       required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Roast Level</label>
+                                <input type="number" step="0.01" min="0" max="1" name="feature_roast_weight"
+                                       class="form-control" value="{{ settings.feature_roast_weight|unlocalize }}"
+                                       required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Bean Type</label>
+                                <input type="number" step="0.01" min="0" max="1" name="feature_bean_weight"
+                                       class="form-control" value="{{ settings.feature_bean_weight|unlocalize }}"
+                                       required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Price Range</label>
+                                <input type="number" step="0.01" min="0" max="1" name="feature_price_weight"
+                                       class="form-control" value="{{ settings.feature_price_weight|unlocalize }}"
+                                       required>
+                            </div>
+                        </div>
+                        <div class="alert alert-secondary mt-3 mb-0">
+                            <i class="bi bi-calculator"></i>
+                            CBF Similarity = w₁×Country + w₂×Roast + w₃×Bean + w₄×Price
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-gear-wide-connected me-2"></i>Advanced Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Time Decay Rate (λ)</label>
+                                <input type="number" step="0.001" min="0.001" max="1" name="time_decay_rate"
+                                       class="form-control" value="{{ settings.time_decay_rate|unlocalize }}" required>
+                                <small class="text-muted">Higher = faster decay of old interactions</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Min Interactions for CF</label>
+                                <input type="number" min="1" max="20" name="min_interactions_for_cf"
+                                       class="form-control" value="{{ settings.min_interactions_for_cf }}" required>
+                                <small class="text-muted">User needs this many interactions for CF</small>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mt-4">
+                                    <input type="checkbox" class="form-check-input" name="is_active"
+                                           id="isActive" {% if settings.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="isActive">System Active</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <i class="bi bi-clock-history"></i>
+                            Time Decay: <strong>weight = base_weight × e<sup>-λt</sup></strong> where t = days since
+                            interaction
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-lg"></i> Save Settings
+                </button>
+            </div>
+
+            <!-- Info Panel -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>How It Works</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Content-Based Filtering (CBF)</h6>
+                        <p class="small text-muted">
+                            Recommends products similar to what the user has interacted with,
+                            based on product features like origin, roast level, etc.
+                        </p>
+
+                        <h6>Collaborative Filtering (CF)</h6>
+                        <p class="small text-muted">
+                            Recommends products based on similar users' behavior.
+                            "Users who liked X also liked Y."
+                        </p>
+
+                        <h6>Popularity-Based</h6>
+                        <p class="small text-muted">
+                            Boosts products that are popular overall
+                            (high purchases, good ratings).
+                        </p>
+
+                        <hr>
+
+                        <h6>Current Configuration</h6>
+                        <div class="small">
+                            <div class="d-flex justify-content-between">
+                                <span>Content-Based:</span>
+                                <strong>{{ settings.weight_content_based|unlocalize }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Collaborative:</span>
+                                <strong>{{ settings.weight_collaborative|unlocalize }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Popularity:</span>
+                                <strong>{{ settings.weight_popularity|unlocalize }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}

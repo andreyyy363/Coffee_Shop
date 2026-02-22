@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Customer Discounts - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title mb-4">Customer Discounts</h1>
+
+    <div class="card">
+        <div class="card-body">
+            {% if customers %}
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Total Orders</th>
+                        <th>Total Spent</th>
+                        <th>Last Order</th>
+                        <th>R</th>
+                        <th>F</th>
+                        <th>M</th>
+                        <th>RFM Score</th>
+                        <th>Discount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for profile in customers %}
+                        <tr>
+                            <td>
+                                <strong>{{ profile.user.email }}</strong>
+                                {% if profile.user.first_name or profile.user.last_name %}
+                                    <br>
+                                    <small class="text-muted">{{ profile.user.first_name }} {{ profile.user.last_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ profile.total_orders }}</td>
+                            <td>${{ profile.total_spent }}</td>
+                            <td>
+                                {% if profile.last_order_date %}
+                                    {{ profile.last_order_date|date:"M d, Y" }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ profile.recency_score }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">{{ profile.frequency_score }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning text-dark">{{ profile.monetary_score }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ profile.rfm_score }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary fs-6">{{ profile.base_discount_percent }}%</span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted mb-0">No customer discount profiles yet. They are created automatically when
+                    customers make purchases.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- RFM Legend -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6><span class="badge bg-info">R</span> Recency Score</h6>
+                    <p class="small text-muted mb-0">
+                        Measures how recently the customer made a purchase.
+                        Higher score = more recent purchase.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6><span class="badge bg-success">F</span> Frequency Score</h6>
+                    <p class="small text-muted mb-0">
+                        Measures how often the customer makes purchases.
+                        Higher score = more frequent purchases.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6><span class="badge bg-warning text-dark">M</span> Monetary Score</h6>
+                    <p class="small text-muted mb-0">
+                        Measures total spending by the customer.
+                        Higher score = more spending.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load decimal_tags %}
+
+{% block title %}Search Results - KAVASOUL{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">Search Results for "{{ query }}"</h1>
+
+    <div class="row g-4">
+        {% for product in products %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="product-card position-relative h-100 d-flex flex-column">
+                    <a href="{% url 'products:detail' slug=product.slug %}" class="product-card-img-wrap">
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid mb-3">
+                        {% else %}
+                            <img src="{% static 'img/default_img.png' %}" alt="{{ product.name }}" class="img-fluid mb-3">
+                        {% endif %}
+                    </a>
+
+                    <h5 class="product-name">{{ product.name }}</h5>
+                    <p class="product-desc mb-1">{{ product.short_description|default:"natural roasted" }}</p>
+                    <p class="product-origin">{{ product.countries_display }}</p>
+
+                    <div class="rating mb-2">
+                        {% with avg_rating=product.annotated_avg_rating|default:0 %}
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= avg_rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-star-fill empty"></i>
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                    </div>
+
+                    <div class="mt-auto">
+                        {% if discount_percent > 0 %}
+                            <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                                <span class="text-muted text-decoration-line-through small">{{ product.base_price }} USD</span>
+                                <span class="badge bg-danger small">-{{ discount_percent }}%</span>
+                            </div>
+                            <p class="product-price text-success mb-2">{{ product.base_price|apply_discount:discount_percent }} USD</p>
+                        {% else %}
+                            <p class="product-price">{{ product.base_price }} USD</p>
+                        {% endif %}
+
+                        <a href="{% url 'products:detail' slug=product.slug %}" class="btn btn-primary w-100">
+                            View
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center">
+                <p class="text-muted">No products found for "{{ query }}"</p>
+                <a href="{% url 'products:catalog' %}" class="btn btn-primary">Browse Catalog</a>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

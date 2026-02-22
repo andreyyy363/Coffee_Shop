@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} - KAVASOUL{% endblock %}
+
+{% block content %}
+    <div class="row mb-5">
+        <!-- Product Image -->
+        <div class="col-md-6">
+            <div class="card p-4" style="background: #f5f5f5;">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid mx-auto d-block"
+                         style="max-height: 400px; object-fit: contain;">
+                {% else %}
+                    <img src="{% static 'img/default_img.png' %}" alt="{{ product.name }}" class="img-fluid mx-auto d-block"
+                         style="max-height: 400px; object-fit: contain;">
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="col-md-6">
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-grow-1">
+                    <h1 style="color: var(--primary-color);">{{ product.name }}</h1>
+                    <p class="text-muted">{{ product.short_description|default:"natural roasted" }}</p>
+                </div>
+                {% if user.is_authenticated %}
+                    <button class="btn p-0 detail-favorite-btn {% if is_favorite %}active{% endif %}"
+                            onclick="toggleFavorite({{ product.id }}, this)">
+                        <i class="bi bi-heart{% if is_favorite %}-fill{% endif %}"></i>
+                    </button>
+                {% endif %}
+            </div>
+
+            <form method="post" action="{% url 'orders:add_to_cart' product_id=product.id %}">
+                {% csrf_token %}
+
+                <!-- Weight Selection -->
+                <div class="mb-4">
+                    <h5>Weight</h5>
+                    <div class="btn-group" role="group">
+                        {% for weight in product.available_weights.all %}
+                            <input type="radio" class="btn-check weight-option" name="weight"
+                                   id="weight_{{ weight.id }}"
+                                   value="{{ weight.id }}"
+                                   data-multiplier="{{ weight.price_multiplier|stringformat:'f' }}"
+                                   {% if forloop.first %}checked{% endif %}>
+                            <label class="btn btn-outline-secondary" for="weight_{{ weight.id }}">
+                                {{ weight.grams }}g
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Bean Type Selection -->
+                <div class="mb-4">
+                    <h5>Type</h5>
+                    <div class="btn-group" role="group">
+                        {% for type in product.available_bean_types.all %}
+                            <input type="radio" class="btn-check bean-type-option" name="bean_type"
+                                   id="type_{{ type.id }}"
+                                   value="{{ type.id }}" data-multiplier="{{ type.price_multiplier|stringformat:'f' }}"
+                                   {% if forloop.first %}checked{% endif %}>
+                            <label class="btn btn-outline-secondary" for="type_{{ type.id }}">
+                                {{ type.name }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Quantity and Price -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center">
+                        <button type="button" class="btn btn-outline-secondary" onclick="updateQuantity(-1)">-</button>
+                        <input type="number" name="quantity" id="quantity" value="1" min="1"
+                               class="form-control mx-2 text-center" style="width: 60px;">
+                        <button type="button" class="btn btn-outline-secondary" onclick="updateQuantity(1)">+</button>
+                    </div>
+                    <div class="text-end">
+                        {% if discount_percent > 0 %}
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted text-decoration-line-through"
+                                      id="original-price">{{ product.base_price }} USD</span>
+                                <span class="badge bg-danger">-{{ discount_percent }}%</span>
+                            </div>
+                            <h3 class="mb-0 text-success" id="dynamic-price">{{ product.base_price }} USD</h3>
+                        {% else %}
+                            <h3 class="mb-0" id="dynamic-price">{{ product.base_price }} USD</h3>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if discount_percent > 0 %}
+                    <div class="alert alert-success py-2 mb-3" style="border-radius: 10px;">
+                        <small><i class="bi bi-gift me-1"></i>Your personal discount:
+                            <strong>{{ discount_percent }}%</strong></small>
+                    </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-primary btn-lg w-100" style="border-radius: 10px;">
+                    Add to cart
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Description -->
+    <div class="mb-5">
+        <h4>Description</h4>
+        <p>{{ product.description }}</p>
+
+        {% if product.taste_profile %}
+            <h5>Taste Profile:</h5>
+            <p>{{ product.taste_profile }}</p>
+        {% endif %}
+
+        {% if product.roast_level %}
+            <p><strong>Roast Level:</strong> {{ product.roast_level.name }}</p>
+        {% endif %}
+
+        <p><strong>Origin:</strong> {{ product.countries_display }}</p>
+    </div>
+
+    <!-- Reviews -->
+    <div class="mb-5">
+        <h4>Reviews ({{ product.reviews_count }})</h4>
+
+        <div class="mb-3">
+            <span class="me-2">Average rating:</span>
+            <span class="rating">
+            {% for i in "12345" %}
+                {% if forloop.counter <= product.average_rating %}
+                    <i class="bi bi-star-fill"></i>
+                {% else %}
+                    <i class="bi bi-star-fill empty"></i>
+                {% endif %}
+            {% endfor %}
+        </span>
+            <span class="ms-2">({{ product.average_rating }})</span>
+        </div>
+
+        {% if user.is_authenticated and can_review %}
+            <div class="card p-3 mb-4">
+                <h5>Leave a review</h5>
+                <form method="post" action="{% url 'reviews:add' product_id=product.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="me-2">Your rating:</label>
+                        <div class="rating-input">
+                            <input type="radio" name="rating" value="5" id="star5" required>
+                            <label for="star5"><i class="bi bi-star-fill"></i></label>
+                            <input type="radio" name="rating" value="4" id="star4">
+                            <label for="star4"><i class="bi bi-star-fill"></i></label>
+                            <input type="radio" name="rating" value="3" id="star3">
+                            <label for="star3"><i class="bi bi-star-fill"></i></label>
+                            <input type="radio" name="rating" value="2" id="star2">
+                            <label for="star2"><i class="bi bi-star-fill"></i></label>
+                            <input type="radio" name="rating" value="1" id="star1">
+                            <label for="star1"><i class="bi bi-star-fill"></i></label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <textarea name="comment" class="form-control" placeholder="Your comment (optional)"
+                                  rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                </form>
+            </div>
+        {% elif user.is_authenticated and user_review %}
+            <div class="alert alert-info">
+                You have already reviewed this product.
+            </div>
+        {% elif not user.is_authenticated %}
+            <p class="text-muted"><a href="{% url 'accounts:login' %}">Log in</a> to leave a review.</p>
+        {% endif %}
+
+        <!-- Reviews list -->
+        {% for review in reviews %}
+            <div class="card p-3 mb-3">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <strong>{{ review.user.display_name }}</strong>
+                        <span class="text-muted ms-2">{{ review.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    <div class="rating">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= review.rating %}
+                                <i class="bi bi-star-fill"></i>
+                            {% else %}
+                                <i class="bi bi-star-fill empty"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if review.comment %}
+                    <p class="mb-0 mt-2">{{ review.comment }}</p>
+                {% endif %}
+                {% if review.user == user or user.is_manager %}
+                    <form method="post" action="{% url 'reviews:delete' review_id=review.id %}" class="mt-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Delete this review?')">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p class="text-muted">No reviews yet. Be the first to review!</p>
+        {% endfor %}
+    </div>
+
+{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/products/product_detail.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/products/product_detail.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const config = {
+                basePrice: parseFloat('{{ product.base_price }}'),
+                discountPercent: parseFloat('{{ discount_percent|default:0 }}')
+            };
+            initProductDetail(config);
+        });
+    </script>
+{% endblock %}

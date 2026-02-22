@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up - KAVASOUL{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0" style="color: var(--primary-color); font-weight: bold;">SIGN UP</h2>
+                    <a href="{% url 'home' %}" class="btn-close"></a>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <input type="text" name="username" class="form-control form-control-lg"
+                               placeholder="Username" style="border-radius: 25px;"
+                               value="{{ form.username.value|default:'' }}">
+                        {% if form.username.errors %}
+                            <small class="text-danger">{{ form.username.errors.0 }}</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="email" name="email" class="form-control form-control-lg"
+                               placeholder="Enter your email" required style="border-radius: 25px;"
+                               value="{{ form.email.value|default:'' }}">
+                        {% if form.email.errors %}
+                            <small class="text-danger">{{ form.email.errors.0 }}</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="password" name="password" class="form-control form-control-lg"
+                               placeholder="Password" required style="border-radius: 25px;">
+                        {% if form.password.errors %}
+                            <small class="text-danger">{{ form.password.errors.0 }}</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <input type="password" name="password_confirm" class="form-control form-control-lg"
+                               placeholder="Confirm password" required style="border-radius: 25px;">
+                    </div>
+
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'accounts:login' %}" class="btn btn-lg px-4"
+                           style="color: var(--primary-color);">
+                            LOG IN
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg px-5" style="border-radius: 10px;">
+                            SIGN UP
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Settings - KAVASOUL{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-3">
+            <h4 style="color: var(--primary-color);">Account</h4>
+        </div>
+        <div class="col-md-9">
+            <!-- Change Username -->
+            <div class="mb-5">
+                <h5 class="text-muted mb-3">CHANGE USERNAME</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_username">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <input type="text" name="username" class="form-control"
+                                   placeholder="Username" value="{{ user.username|default:'' }}"
+                                   style="border-radius: 25px;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3" style="border-radius: 10px;">
+                        Confirm
+                    </button>
+                </form>
+            </div>
+
+            <hr>
+
+            <!-- Reset Password -->
+            <div class="mb-5">
+                <h5 class="text-muted mb-3">RESET YOUR PASSWORD</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_password">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <input type="password" name="old_password" class="form-control"
+                                   placeholder="OLD password" style="border-radius: 25px;">
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <input type="password" name="new_password" class="form-control"
+                                   placeholder="NEW password" style="border-radius: 25px;">
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <input type="password" name="new_password_confirm" class="form-control"
+                                   placeholder="Confirm password" style="border-radius: 25px;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3" style="border-radius: 10px;">
+                        Confirm
+                    </button>
+                </form>
+            </div>
+
+            <hr>
+
+            <!-- Contact Info -->
+            <div class="mb-5">
+                <h5 class="text-muted mb-3">CONTACT INFORMATION</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_profile">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <input type="text" name="first_name" class="form-control"
+                                   placeholder="First name" value="{{ user.first_name }}"
+                                   style="border-radius: 25px;">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" name="last_name" class="form-control"
+                                   placeholder="Last name" value="{{ user.last_name }}"
+                                   style="border-radius: 25px;">
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <div data-phone-input data-phone-name="phone">
+                                <input type="tel" name="phone" value="{{ user.phone }}" placeholder="Phone number">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-8">
+                        <textarea name="address" class="form-control"
+                                  placeholder="Delivery address" rows="2"
+                                  style="border-radius: 15px;">{{ user.address }}</textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3" style="border-radius: 10px;">
+                        Save Changes
+                    </button>
+                </form>
+            </div>
+
+            <hr>
+
+            <!-- Birthday -->
+            <div class="mb-5">
+                <h5 class="text-muted mb-3">BIRTHDAY <small class="text-info">(for personal discount)</small></h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_birth_date">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <input type="date" name="birth_date" class="form-control"
+                                   value="{{ user.birth_date|date:'Y-m-d' }}"
+                                   {% if not user.can_change_birth_date %}disabled{% endif %}
+                                   style="border-radius: 25px;">
+                        </div>
+                        <div class="col-md-4">
+                            {% if user.can_change_birth_date %}
+                                <button type="submit" class="btn btn-primary" style="border-radius: 10px;">
+                                    {% if user.birth_date %}Update{% else %}Set{% endif %} Birthday
+                                </button>
+                            {% else %}
+                                <span class="text-muted small">
+                                <i class="bi bi-lock"></i> Can be changed in {{ user.days_until_birth_date_change }} days
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if user.birth_date %}
+                        <small class="text-muted mt-2 d-block">
+                            <i class="bi bi-info-circle"></i>
+                            Birthday: {{ user.birth_date|date:"F j" }}.
+                            You'll get a special discount around this date!
+                        </small>
+                    {% else %}
+                        <small class="text-muted mt-2 d-block">
+                            <i class="bi bi-gift"></i> Set your birthday to receive a special discount!
+                        </small>
+                    {% endif %}
+                </form>
+            </div>
+
+            <hr>
+
+            <!-- Log Out -->
+            <div class="d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0">Log Out</h5>
+                <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary" style="border-radius: 25px;">
+                    <i class="bi bi-box-arrow-right me-2"></i>LOG OUT
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}

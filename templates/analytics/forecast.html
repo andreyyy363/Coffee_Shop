@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% load l10n static %}
+
+{% block title %}Sales Forecast - KAVASOUL{% endblock %}
+
+{% block content %}
+<h1 class="page-title mb-4">
+    <i class="bi bi-graph-up-arrow me-2"></i>Sales Forecasting
+</h1>
+
+<!-- Controls Panel -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Forecast Parameters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" id="forecastForm">
+            <div class="row g-3 align-items-end">
+                <!-- Metric selector -->
+                <div class="col-md-3">
+                    <label class="form-label">Metric</label>
+                    <select name="metric" id="paramMetric" class="form-select">
+                        <option value="revenue" {% if metric == 'revenue' %}selected{% endif %}>Revenue (USD)</option>
+                        <option value="orders" {% if metric == 'orders' %}selected{% endif %}>Order Count</option>
+                    </select>
+                </div>
+
+                <!-- History period -->
+                <div class="col-md-2">
+                    <label class="form-label">History (days)</label>
+                    <input type="number" name="days_back" id="paramDaysBack" class="form-control" 
+                           value="{{ days_back }}" min="14" max="365">
+                </div>
+
+                <!-- Forecast horizon -->
+                <div class="col-md-2">
+                    <label class="form-label">Forecast (days)</label>
+                    <input type="number" name="forecast_days" id="paramForecastDays" class="form-control" 
+                           value="{{ forecast_days }}" min="7" max="60">
+                </div>
+
+                <div class="col-md-5"></div>
+
+                <!-- α slider -->
+                <div class="col-md-4">
+                    <label class="form-label">α (level): <strong id="alphaValue">{{ alpha|unlocalize }}</strong></label>
+                    <input type="range" class="form-range" min="0.01" max="0.99" step="0.01"
+                           name="alpha" id="paramAlpha" value="{{ alpha|unlocalize }}">
+                </div>
+                <!-- β slider -->
+                <div class="col-md-4">
+                    <label class="form-label">β (trend): <strong id="betaValue">{{ beta|unlocalize }}</strong></label>
+                    <input type="range" class="form-range" min="0.01" max="0.99" step="0.01"
+                           name="beta" id="paramBeta" value="{{ beta|unlocalize }}">
+                </div>
+                <!-- γ slider -->
+                <div class="col-md-4">
+                    <label class="form-label">γ (season): <strong id="gammaValue">{{ gamma|unlocalize }}</strong></label>
+                    <input type="range" class="form-range" min="0.01" max="0.99" step="0.01"
+                           name="gamma" id="paramGamma" value="{{ gamma|unlocalize }}">
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex align-items-center">
+                <a href="{% url 'analytics:forecast' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset to Defaults
+                </a>
+                <span id="loadingIndicator" class="ms-3 text-muted d-none">
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    Updating...
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4" id="summaryCards" {% if not result.summary or result.summary == 'No sales data available.' %}style="display:none"{% endif %}>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <div class="text-muted small">TOTAL (<span id="summaryDays">{{ days_back }}</span>d)</div>
+            <div class="h4 mb-0" id="summaryTotal">
+                {% if metric == 'revenue' %}
+                    ${{ result.summary.total_revenue }}
+                {% else %}
+                    {{ result.summary.total_revenue }} orders
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <div class="text-muted small">AVG / DAY</div>
+            <div class="h4 mb-0" id="summaryAvg">
+                {% if metric == 'revenue' %}
+                    ${{ result.summary.avg_daily }}
+                {% else %}
+                    {{ result.summary.avg_daily }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <div class="text-muted small">FORECAST (<span id="summaryFcDays">{{ forecast_days }}</span>d)</div>
+            <div class="h4 mb-0" id="summaryForecast">
+                {% if metric == 'revenue' %}
+                    ${{ result.summary.forecast_total }}
+                {% else %}
+                    {{ result.summary.forecast_total }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <div class="text-muted small">TREND</div>
+            <div class="h4 mb-0" id="summaryTrend">
+                {% if result.summary.trend == 'up' %}
+                    <span class="text-success"><i class="bi bi-arrow-up-circle"></i> Growing</span>
+                {% elif result.summary.trend == 'down' %}
+                    <span class="text-danger"><i class="bi bi-arrow-down-circle"></i> Declining</span>
+                {% else %}
+                    <span class="text-warning"><i class="bi bi-dash-circle"></i> Stable</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Forecast Chart -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0" id="chartTitle">
+            <i class="bi bi-graph-up me-2"></i>
+            {% if metric == 'revenue' %}Revenue{% else %}Orders{% endif %} — History & Forecast
+        </h5>
+    </div>
+    <div class="card-body">
+        <canvas id="forecastChart" height="100"></canvas>
+    </div>
+</div>
+
+<!-- Error Metrics Comparison -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Model Accuracy</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Moving Average</th>
+                            <th>Holt-Winters</th>
+                        </tr>
+                    </thead>
+                    <tbody id="metricsTableBody">
+                        <tr>
+                            <td>MAE <small class="text-muted">(Mean Abs Error)</small></td>
+                            <td id="maMae">{{ result.metrics.moving_average.mae }}</td>
+                            <td id="hwMae">
+                                <strong>{{ result.metrics.holt_winters.mae }}</strong>
+                                {% if result.metrics.holt_winters.mae < result.metrics.moving_average.mae %}
+                                    <span class="badge bg-success ms-1">Better</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>RMSE <small class="text-muted">(Root Mean Sq)</small></td>
+                            <td id="maRmse">{{ result.metrics.moving_average.rmse }}</td>
+                            <td id="hwRmse">
+                                <strong>{{ result.metrics.holt_winters.rmse }}</strong>
+                                {% if result.metrics.holt_winters.rmse < result.metrics.moving_average.rmse %}
+                                    <span class="badge bg-success ms-1">Better</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>MAPE <small class="text-muted">(% Error)</small></td>
+                            <td id="maMape">{{ result.metrics.moving_average.mape }}%</td>
+                            <td id="hwMape">
+                                <strong>{{ result.metrics.holt_winters.mape }}%</strong>
+                                {% if result.metrics.holt_winters.mape < result.metrics.moving_average.mape %}
+                                    <span class="badge bg-success ms-1">Better</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Mathematical Model</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Holt-Winters (Triple Exponential Smoothing)</strong></p>
+                <div class="small text-muted mb-2">Additive model with weekly seasonality (m={{ result.params.season_period }}):</div>
+                <div class="bg-light rounded p-2 font-monospace small mb-2">
+                    Level:&nbsp;&nbsp;&nbsp; l<sub>t</sub> = α(x<sub>t</sub> − s<sub>t−m</sub>) + (1−α)(l<sub>t−1</sub> + b<sub>t−1</sub>)<br>
+                    Trend:&nbsp;&nbsp;&nbsp; b<sub>t</sub> = β(l<sub>t</sub> − l<sub>t−1</sub>) + (1−β)b<sub>t−1</sub><br>
+                    Season:&nbsp;&nbsp; s<sub>t</sub> = γ(x<sub>t</sub> − l<sub>t</sub>) + (1−γ)s<sub>t−m</sub><br>
+                    Forecast: ŷ<sub>t+h</sub> = l<sub>t</sub> + h·b<sub>t</sub> + s<sub>t−m+h<sub>m</sub></sub>
+                </div>
+                <div class="small" id="modelBadges">
+                    <span class="badge bg-secondary">α = {{ alpha|unlocalize }}</span>
+                    <span class="badge bg-secondary">β = {{ beta|unlocalize }}</span>
+                    <span class="badge bg-secondary">γ = {{ gamma|unlocalize }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Products -->
+<div class="card mb-4" id="topProductsSection" {% if not top_products %}style="display:none"{% endif %}>
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-trophy me-2"></i>Top Products (<span id="topProductsDays">{{ days_back }}</span> days)</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-lg-6">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topProductsBody">
+                        {% for p in top_products %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ p.product_name }}</td>
+                            <td>{{ p.total_qty }}</td>
+                            <td>${{ p.total_revenue }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-lg-6">
+                <canvas id="topProductsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card p-5 text-center" id="noDataCard" {% if result.summary and result.summary != 'No sales data available.' %}style="display:none"{% endif %}>
+    <i class="bi bi-inbox display-1 text-muted"></i>
+    <h3 class="mt-3">No Sales Data</h3>
+    <p class="text-muted">There are no completed orders in the selected period to generate a forecast.</p>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="{% static 'js/analytics/forecast.js' %}"></script>
+
+<script>
+    {% if result.summary and result.summary != 'No sales data available.' %}
+    initForecast({
+        apiUrl: '{% url "analytics:forecast_api" %}',
+        metric: '{{ metric }}',
+        initialData: JSON.parse('{{ result_json|escapejs }}'),
+        topProducts: [{% for p in top_products %}{ product_name: '{{ p.product_name|escapejs }}', total_qty: {{ p.total_qty|unlocalize }}, total_revenue: {{ p.total_revenue|unlocalize }} }{% if not forloop.last %},{% endif %}{% endfor %}]
+    });
+    {% else %}
+    initForecast({
+        apiUrl: '{% url "analytics:forecast_api" %}',
+        metric: '{{ metric }}',
+        initialData: null,
+        topProducts: []
+    });
+    {% endif %}
+</script>
+{% endblock %}
